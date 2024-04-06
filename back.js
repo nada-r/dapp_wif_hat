@@ -72,7 +72,9 @@ export async function placeBet(
     return id;
 }
 
-export async function acceptBet(discordId, bet) {}
+export async function acceptBet(discordId, bet) {
+    console.log("accepting bet", bet);
+}
 
 // export async function closeBet(bet) {
 //     const betAddress = bet.address;
