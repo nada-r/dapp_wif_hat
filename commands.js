@@ -46,6 +46,33 @@ const FUND = {
   type: 1,
 };
 
-const ALL_COMMANDS = [TEST_COMMAND, FUND];
+const CREATE_BET = {
+  name: 'create_bet',
+  description: 'create a bet and ping someone',
+  options: [
+    {
+      type: 3,
+      name: 'my_winner',
+      description: 'Player you bet on',
+      required: true,
+    },
+    {
+      type: 3,
+      name: 'will_destroy',
+      description: 'Player you bet against',
+      required: true,
+    },
+    {
+      type: 6,
+      name: 'challenger',
+      description: 'ping someone',
+      required: false,
+      choices: createCommandChoices(),
+    },
+  ],
+  type: 1,
+};
+
+const ALL_COMMANDS = [TEST_COMMAND, FUND, CREATE_BET];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);
