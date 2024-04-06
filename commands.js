@@ -25,14 +25,20 @@ const TEST_COMMAND = {
 };
 
 // Command containing options
-const CREATE_WALLET = {
-  name: 'createwallet',
-  description: 'Create your Solana wallet',
+const FUND = {
+  name: 'fundwallet',
+  description: 'Fund your Solana wallet',
   options: [
     {
       type: 3,
-      name: 'object',
-      description: 'Pick your object',
+      name: 'amount',
+      description: 'Define amount',
+      required: true,
+    },
+    {
+      type: 3,
+      name: 'currency',
+      description: 'Define currency',
       required: true,
       choices: createCommandChoices(),
     },
@@ -40,6 +46,6 @@ const CREATE_WALLET = {
   type: 1,
 };
 
-const ALL_COMMANDS = [TEST_COMMAND, CREATE_WALLET];
+const ALL_COMMANDS = [TEST_COMMAND, FUND];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);
