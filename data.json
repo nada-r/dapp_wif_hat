@@ -1,0 +1,22 @@
+{
+    "wallets": [],
+    "bets": [
+        {
+            "address": "",
+            "challenger": "",
+            "maker": "",
+            "taker": "",
+            "game": "",
+            "choiceA": "",
+            "choiceB": "",
+            "makerChoice": "",
+            "amount": 0,
+            "created": "",
+            "accepted": "",
+            "closed": "",
+            "acceptanceValidUntil": "",
+            "cancelAfter": "",
+            "status": "pending"
+        }
+    ]
+}
