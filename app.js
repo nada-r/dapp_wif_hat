@@ -14,7 +14,7 @@ import {
     DiscordRequest,
 } from "./utils.js";
 import { getShuffledOptions, getResult } from "./game.js";
-import { acceptBet, placeBet } from "./back.js";
+import { acceptBet, placeBet, fundWallet } from "./back.js";
 
 console.log(`Hello ${process.env.HELLO}`);
 
@@ -52,10 +52,24 @@ app.post("/interactions", async function (req, res) {
             const amount = parseFloat(req.body.data.options[0].value);
             const currency = req.body.data.options[1].value;
 
+            let qr = await fundWallet(userId, amount, currency);
+
+            // Send the QR code as a message
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: `Bet created by <@${userId}>`,
+                    components: [
+                        {
+                            type: MessageComponentTypes.ACTION_ROW,
+                            components: [
+                                {
+                                    type: MessageComponentTypes.IMAGE,
+                                    url: qr,
+                                },
+                            ],
+                        },
+                    ],
                 },
             });
         } else if (name === "create_bet" && id) {

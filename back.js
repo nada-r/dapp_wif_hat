@@ -140,9 +140,34 @@ export async function deposit(amount, discordId, currency) {
     }
 }
 
-async function main() {
-    await createWallet("test");
-    console.log(wallets);
-}
+export async function fundWallet(discordId, amount, currency) {
+    let wallet = wallets.find((wallet) => wallet.discordId === discordId);
+    let address = wallet.address;
 
-main();
+    const reference = new Keypair().publicKey;
+    const label = `SolBet fund wallet - ${discordId}`;
+    const message = `Fund your account with ${amount} ${currency}`;
+    const splToken = new PublicKey(
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    );
+    // const memo = 'JC#4098';
+
+    let url = encodeURL({
+        address,
+        amount: new BigNumber(amount).times(10 ** 9).toString(),
+        reference,
+        label,
+        message,
+        splToken,
+        // memo,
+    });
+
+    let qr = createQR(url);
+    return qr;
+}
+// async function main() {
+//     await createWallet("test");
+//     console.log(wallets);
+// }
+
+// main();
