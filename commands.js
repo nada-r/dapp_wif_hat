@@ -26,7 +26,7 @@ const TEST_COMMAND = {
 
 // Command containing options
 const CREATE_WALLET = {
-  name: 'create wallet',
+  name: 'createwallet',
   description: 'Create your Solana wallet',
   options: [
     {
