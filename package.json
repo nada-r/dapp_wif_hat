@@ -15,10 +15,13 @@
   "author": "Shay DeWael",
   "license": "MIT",
   "dependencies": {
+    "@solana/pay": "^0.2.5",
+    "@solana/web3.js": "^1.91.4",
     "discord-interactions": "^3.2.0",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "node-fetch": "^3.3.0"
+    "node-fetch": "^3.3.0",
+    "qrcode": "^1.5.3"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"

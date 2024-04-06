@@ -15,6 +15,10 @@ import {
 } from "./utils.js";
 import { getShuffledOptions, getResult } from "./game.js";
 import { acceptBet, placeBet, fundWallet } from "./back.js";
+import axios from "axios";
+import { google } from "googleapis";
+import QRCode from "qrcode";
+import fs from "fs";
 
 console.log(`Hello ${process.env.HELLO}`);
 
@@ -52,22 +56,86 @@ app.post("/interactions", async function (req, res) {
             const amount = parseFloat(req.body.data.options[0].value);
             const currency = req.body.data.options[1].value;
 
-            let qr = await fundWallet(userId, amount, currency);
+            const url = await fundWallet(userId, amount, currency);
 
-            // Send the QR code as a message
+            QRCode.toFile("./qrcode.png", url, function (err) {
+                if (err) throw err;
+                console.log("QR code image saved.");
+            });
+            // Créez un JWT pour l'authentification
+            const jwtClient = new google.auth.JWT(
+                process.env.GOOGLE_CLIENT_EMAIL,
+                null,
+                process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+                ["https://www.googleapis.com/auth/drive"]
+            );
+
+            // Authentifiez-vous avec Google Drive
+            jwtClient.authorize(function (err, tokens) {
+                if (err) {
+                    console.log(err);
+                    return;
+                }
+
+                const drive = google.drive({ version: "v3", auth: jwtClient });
+
+                // Téléchargez l'image sur Google Drive
+                const fileMetadata = {
+                    name: "solanaPay.png",
+                };
+                const media = {
+                    mimeType: "image/png",
+                    body: fs.createReadStream(
+                        path.join(__dirname, "myImage.png")
+                    ),
+                };
+                drive.files.create(
+                    {
+                        resource: fileMetadata,
+                        media: media,
+                        fields: "id",
+                    },
+                    function (err, file) {
+                        if (err) {
+                            console.error(err);
+                            return;
+                        }
+
+                        // Obtenez l'URL de l'image
+                        const imageUrl = `https://drive.google.com/uc?export=view&id=${file.data.id}`;
+
+                        // Envoyez l'image à Discord
+                        axios.post(
+                            "https://discord.com/api/webhooks/your-webhook-id",
+                            {
+                                content: "Voici votre image :",
+                                embeds: [
+                                    {
+                                        image: {
+                                            url: imageUrl,
+                                        },
+                                    },
+                                ],
+                            }
+                        );
+                    }
+                );
+            });
+
+            const output = await axios.request(input);
+
+            console.log(output.data.url);
+
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: `Bet created by <@${userId}>`,
-                    components: [
+                    content: "Scan the QR code to fund your wallet",
+                    embeds: [
                         {
-                            type: MessageComponentTypes.ACTION_ROW,
-                            components: [
-                                {
-                                    type: MessageComponentTypes.IMAGE,
-                                    url: qr,
-                                },
-                            ],
+                            title: "QR Code",
+                            image: {
+                                url: output.data.url,
+                            },
                         },
                     ],
                 },
