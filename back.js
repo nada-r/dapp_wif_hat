@@ -142,6 +142,10 @@ export async function deposit(amount, discordId, currency) {
 
 export async function fundWallet(discordId, amount, currency) {
     let wallet = wallets.find((wallet) => wallet.discordId === discordId);
+    if (!wallet) {
+        createWallet(discordId);
+        wallet = wallets.find((wallet) => wallet.discordId === discordId);
+    }
     let address = wallet.address;
 
     const reference = new Keypair().publicKey;
