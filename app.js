@@ -1,18 +1,22 @@
-import { config } from 'dotenv';
+import { config } from "dotenv";
 config();
-import express from 'express';
+import express from "express";
 import {
     InteractionType,
     InteractionResponseType,
     InteractionResponseFlags,
     MessageComponentTypes,
     ButtonStyleTypes,
-} from 'discord-interactions';
-import { VerifyDiscordRequest, getRandomEmoji, DiscordRequest } from './utils.js';
-import { getShuffledOptions, getResult } from './game.js';
+} from "discord-interactions";
+import {
+    VerifyDiscordRequest,
+    getRandomEmoji,
+    DiscordRequest,
+} from "./utils.js";
+import { getShuffledOptions, getResult } from "./game.js";
+import { placeBet } from "./back.js";
 
-console.log(`Hello ${process.env.HELLO}`)
-
+console.log(`Hello ${process.env.HELLO}`);
 
 const app = express();
 
@@ -22,8 +26,7 @@ app.use(express.json({ verify: VerifyDiscordRequest(process.env.PUBLIC_KEY) }));
 
 const activeGames = {};
 
-app.post('/interactions', async function (req, res) {
-
+app.post("/interactions", async function (req, res) {
     const { type, id, data } = req.body;
 
     if (type === InteractionType.PING) {
@@ -33,53 +36,96 @@ app.post('/interactions', async function (req, res) {
     if (type === InteractionType.APPLICATION_COMMAND) {
         const { name } = data;
 
-        if (name === 'test') {
+        if (name === "test") {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: 'hello world ' + getRandomEmoji(),
+                    content: "hello world " + getRandomEmoji(),
                 },
             });
         }
 
-        if (name === 'fundwallet' && id) {
-          const userId = req.body.member.user.id;
-          // User's object choice
-          const objectName = req.body.data.options[0].value;
-      
-          // Create active game using message ID as the game ID
-          activeGames[id] = {
-              id: userId,
-              objectName,
-          };
-      
-          return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-              content: `Bet created by <@${userId}>`,
-              components: [
-              {
-                  type: MessageComponentTypes.ACTION_ROW,
-                  components: [
-                  {
-                      type: MessageComponentTypes.BUTTON,
-                      // Append the game ID to use later on
-                      custom_id: `accept_button_${req.body.id}`,
-                      label: 'Accept',
-                      style: ButtonStyleTypes.PRIMARY,
-                  },
-                  ],
-              },
-              ],
-          },
-          });
-      }
+        if (name === "fundwallet" && id) {
+            const userId = req.body.member.user.id;
 
+            // User's object choice
+            const amount = parseFloat(req.body.data.options[0].value);
+            const currency = req.body.data.options[1].value;
+
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: `Bet created by <@${userId}>`,
+                    components: [
+                        {
+                            type: MessageComponentTypes.ACTION_ROW,
+                            components: [
+                                {
+                                    type: MessageComponentTypes.BUTTON,
+                                    // Append the game ID to use later on
+                                    custom_id: `accept_button_${req.body.id}`,
+                                    label: "Accept",
+                                    style: ButtonStyleTypes.PRIMARY,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+        } else if (name === "create_bet" && id) {
+            const userId = req.body.member.user.id;
+
+            // User's object choice
+            const amount = parseFloat(req.body.data.options[0].value);
+            const currency = req.body.data.options[1].value;
+            const my_winner = req.body.data.options[2].value;
+            const will_destroy = req.body.data.options[3].value;
+            const challenger = req.body.data.options[4].value;
+
+            const { id } = placeBet(
+                userId,
+                amount,
+                currency,
+                my_winner,
+                will_destroy,
+                challenger
+            );
+
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: `Bet created by <@${userId}>`,
+                    components: [
+                        {
+                            type: MessageComponentTypes.ACTION_ROW,
+                            components: [
+                                {
+                                    type: MessageComponentTypes.BUTTON,
+                                    // Append the game ID to use later on
+                                    custom_id: `accept_button_${req.body.id}`,
+                                    label: "Accept",
+                                    style: ButtonStyleTypes.PRIMARY,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+        } else if (name === "accept_bet" && id) {
+            const userId = req.body.member.user.id;
+
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: `Bet accepted by <@${userId}>`,
+                },
+            });
+        }
     }
 });
 
 app.listen(PORT, () => {
-    console.log('Listening on port', PORT);
+    console.log("Listening on port", PORT);
 });
 
 /*
