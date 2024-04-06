@@ -91,10 +91,13 @@ app.post("/interactions", async function (req, res) {
                 challenger
             );
 
+            const message = `<@${userId}> thinks that ${my_winner} will destroy ${will_destroy} in their next game. He's betting ${amount} ${currency}! Will you accept the challenge ${
+                challenger ? challenger : ""
+            } ?`;
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: `Bet created by <@${userId}>`,
+                    content: message,
                     components: [
                         {
                             type: MessageComponentTypes.ACTION_ROW,
@@ -102,9 +105,9 @@ app.post("/interactions", async function (req, res) {
                                 {
                                     type: MessageComponentTypes.BUTTON,
                                     // Append the game ID to use later on
-                                    custom_id: `accept_button_${req.body.id}`,
-                                    label: "Accept",
-                                    style: ButtonStyleTypes.PRIMARY,
+                                    custom_id: `accept_buttona_${id}`,
+                                    label: "Bet against",
+                                    style: ButtonStyleTypes.SUCCESS,
                                 },
                             ],
                         },

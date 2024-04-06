@@ -1,5 +1,5 @@
 import { Keypair } from "@solana/web3.js";
-import { Cluster, clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
+import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
 import { encodeURL, createQR } from "@solana/pay";
 import BigNumber from "bignumber.js";
 import bs58 from "bs58";
