@@ -157,7 +157,7 @@ export async function fundWallet(discordId, amount, currency) {
     // const memo = 'JC#4098';
 
     let url = encodeURL({
-        address,
+        recipient: address,
         amount: new BigNumber(amount).times(10 ** 9).toString(),
         reference,
         label,
