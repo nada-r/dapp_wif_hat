@@ -56,20 +56,6 @@ app.post("/interactions", async function (req, res) {
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: `Bet created by <@${userId}>`,
-                    components: [
-                        {
-                            type: MessageComponentTypes.ACTION_ROW,
-                            components: [
-                                {
-                                    type: MessageComponentTypes.BUTTON,
-                                    // Append the game ID to use later on
-                                    custom_id: `accept_button_${req.body.id}`,
-                                    label: "Accept",
-                                    style: ButtonStyleTypes.PRIMARY,
-                                },
-                            ],
-                        },
-                    ],
                 },
             });
         } else if (name === "create_bet" && id) {
@@ -91,8 +77,8 @@ app.post("/interactions", async function (req, res) {
                 challenger
             );
 
-            const message = `<@${userId}> thinks that ${my_winner} will destroy ${will_destroy} in their next game. He's betting ${amount} ${currency}! Will you accept the challenge ${
-                challenger ? challenger : ""
+            const message = `<@${userId}> thinks that ${my_winner} will destroy ${will_destroy} in their next game. He's betting ${amount} ${currency}! Will you accept the challenge${
+                challenger ? " <@" + challenger + ">" : ""
             } ?`;
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -105,7 +91,7 @@ app.post("/interactions", async function (req, res) {
                                 {
                                     type: MessageComponentTypes.BUTTON,
                                     // Append the game ID to use later on
-                                    custom_id: `accept_buttona_${id}`,
+                                    custom_id: `accept_button_${id}`,
                                     label: "Bet against",
                                     style: ButtonStyleTypes.SUCCESS,
                                 },

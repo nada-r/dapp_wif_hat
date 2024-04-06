@@ -72,8 +72,11 @@ export async function placeBet(
     return id;
 }
 
-export async function acceptBet(discordId, bet) {
+export async function acceptBet(discordId, betId) {
     console.log("accepting bet", bet);
+
+    let bet = bets.find((bet) => bet.id === betId);
+    let wallet = wallets.find((wallet) => wallet.discordId === discordId);
 }
 
 // export async function closeBet(bet) {
