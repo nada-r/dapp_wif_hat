@@ -1,0 +1,29 @@
+{
+  "wallets": [
+    {
+      "discordId": "703196555515133952",
+      "address": "2ax3geQJHsm8hkJAJbcJ29b2uWckB1XX6R6CmmBi8rrP",
+      "privateKey": "5BY2ZH8L5eUHtwCpzR7GWPxyHAPbDmfdu5YKkvTGmzGyrmJXAAzXgxDnQYcKgE5Pagy2VSnWPVB2TnXZan8anhrB",
+      "bets": []
+    }
+  ],
+  "bets": [
+    {
+      "address": "",
+      "challenger": "",
+      "maker": "",
+      "taker": "",
+      "game": "",
+      "choiceA": "",
+      "choiceB": "",
+      "makerChoice": "",
+      "amount": 0,
+      "created": "",
+      "accepted": "",
+      "closed": "",
+      "acceptanceValidUntil": "",
+      "cancelAfter": "",
+      "status": "pending"
+    }
+  ]
+}

@@ -9,18 +9,49 @@ mod betting {
 
     pub fn propose_bet(ctx: Context<ProposeBet>, amount: u64) -> Result<()> {
         require!(ctx.accounts.proposer_token_account.amount >= amount, BettingError::InsufficientFunds);
-        transfer_tokens(&ctx.accounts.token_program, &ctx.accounts.proposer_token_account, &ctx.accounts.bet_token_account, &ctx.accounts.proposer, amount)?;
-        setup_bet(&mut ctx.accounts.bet, amount, *ctx.accounts.proposer.key);
+        transfer_tokens(
+            &ctx.accounts.token_program, 
+            &ctx.accounts.proposer_token_account, 
+            &ctx.accounts.bet_token_account, 
+            &ctx.accounts.proposer, 
+            amount
+        )?;
+        setup_bet(
+            &mut ctx.accounts.bet, 
+            amount, 
+            ctx.accounts.proposer.key(), 
+            ctx.accounts.proposer_token_account.key(), 
+            ctx.accounts.bet_token_account.key()
+        );
         Ok(())
     }
 
-    //cancel bet
+    pub fn cancel_bet(ctx: Context<CancelBet>) -> Result<()> {
+        require!(ctx.accounts.bet.status == BetStatus::Open, BettingError::BetNotAccepted);
+        require!(ctx.accounts.bet.proposer == *ctx.accounts.proposer.key, BettingError::Unauthorized);
+        transfer_tokens(
+            &ctx.accounts.token_program, 
+            &ctx.accounts.bet_token_account, 
+            &ctx.accounts.proposer_token_account, 
+            &ctx.accounts.proposer, 
+            ctx.accounts.bet_token_account.amount
+        )?;
+        ctx.accounts.bet.status = BetStatus::Canceled;
+        Ok(())
+    }
 
     pub fn accept_bet(ctx: Context<AcceptBet>, amount: u64) -> Result<()> {
         require!(ctx.accounts.bet.status == BetStatus::Open && ctx.accounts.bet.amount == amount, BettingError::BetAlreadyAccepted);
         require!(ctx.accounts.acceptor_token_account.amount >= amount, BettingError::InsufficientFunds);
-        transfer_tokens(&ctx.accounts.token_program, &ctx.accounts.acceptor_token_account, &ctx.accounts.bet_token_account, &ctx.accounts.acceptor, amount)?;
-        ctx.accounts.bet.acceptor = *ctx.accounts.acceptor.key;
+        transfer_tokens(
+            &ctx.accounts.token_program, 
+            &ctx.accounts.acceptor_token_account, 
+            &ctx.accounts.bet_token_account, 
+            &ctx.accounts.acceptor, 
+            amount
+        )?;
+        ctx.accounts.bet.acceptor = ctx.accounts.acceptor.key();
+        ctx.accounts.bet.acceptor_token_account = ctx.accounts.acceptor_token_account.key();
         ctx.accounts.bet.status = BetStatus::Accepted;
         Ok(())
     }
@@ -32,17 +63,26 @@ mod betting {
         Ok(())
     }
 
-    //nullify_bet
+    pub fn nullify_bet(ctx: Context<ResolveBet>) -> Result<()> {
+        require!(ctx.accounts.bet.status == BetStatus::Accepted, BettingError::BetNotAccepted);
+        ctx.accounts.bet.status = BetStatus::Nullified;
+        Ok(())
+    }
 
     pub fn claim_winnings(ctx: Context<ClaimWinnings>) -> Result<()> {
         require!(ctx.accounts.bet.status == BetStatus::Resolved && *ctx.accounts.claimant.key == ctx.accounts.bet.winner, BettingError::NotTheWinner);
-        //if(ctx.accounts.bet.status == BetStatus::Nullified)
-        //if(ctx.accounts.bet.status == BetStatus::Canceled)
-        //if(ctx.accounts.bet.status == BetStatus::Resolved)
-        transfer_tokens(&ctx.accounts.token_program, &ctx.accounts.bet_token_account, &ctx.accounts.claimant_token_account, &ctx.accounts.admin, ctx.accounts.bet_token_account.amount)?;
+        transfer_tokens(
+            &ctx.accounts.token_program, 
+            &ctx.accounts.bet_token_account, 
+            &ctx.accounts.claimant_token_account, 
+            &ctx.accounts.admin, 
+            ctx.accounts.bet_token_account.amount
+        )?;
         ctx.accounts.bet.status = BetStatus::Closed;
         Ok(())
     }
+
+    //pub fn retrieve_bet when bet nullified
 }
 
 fn transfer_tokens<'info>(
@@ -63,11 +103,14 @@ fn transfer_tokens<'info>(
     Ok(())
 }
 
-fn setup_bet(bet: &mut Account<Bet>, amount: u64, proposer: Pubkey) {
+fn setup_bet(bet: &mut Account<Bet>, amount: u64, proposer: Pubkey, proposer_token_account: Pubkey, bet_token_account: Pubkey) {
     bet.amount = amount;
     bet.proposer = proposer;
     bet.acceptor = Pubkey::default();
     bet.winner = Pubkey::default();
+    bet.proposer_token_account = proposer_token_account;
+    bet.acceptor_token_account = Pubkey::default();
+    bet.bet_token_account = bet_token_account;
     bet.status = BetStatus::Open;
 }
 
@@ -85,7 +128,17 @@ pub struct ProposeBet<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-//pub struct CancelBet<'info>
+#[derive(Accounts)]
+pub struct CancelBet<'info> {
+    #[account(mut)]
+    pub bet: Account<'info, Bet>,
+    #[account(mut)]
+    pub proposer: Signer<'info>,
+    #[account(mut)]
+    pub proposer_token_account: Account<'info, TokenAccount>,
+    pub bet_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+}
 
 #[derive(Accounts)]
 pub struct AcceptBet<'info> {
@@ -132,9 +185,9 @@ pub struct Bet {
     pub acceptor: Pubkey,
     pub winner: Pubkey,
 
-    //pub proposer_token_account: x,
-    //pub acceptor_token_account: x,
-    //pub bet_token_account: x,
+    pub proposer_token_account: Pubkey,
+    pub acceptor_token_account: Pubkey,
+    pub bet_token_account: Pubkey,
     //pub token_mint: x,
     
     pub status: BetStatus,
@@ -158,4 +211,5 @@ pub enum BettingError {
     NotTheWinner,
     InsufficientFunds,
     InvalidAmount,
+    Unauthorized
 }

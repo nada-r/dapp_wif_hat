@@ -1,3 +1,3 @@
-Solbet
+# 🎮 Solbet 🎮
 
-Best on Esport on Solana
+Bet on Esport with the Solana 🛡️ 
