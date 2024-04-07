@@ -14,11 +14,8 @@ import {
     DiscordRequest,
 } from "./utils.js";
 import { getShuffledOptions, getResult } from "./game.js";
-import { acceptBet, placeBet, fundWallet } from "./back.js";
-import axios from "axios";
-import FormData from "form-data";
+import { acceptBet, placeBet, fundWallet, withdraw } from "./back.js";
 import multer from "multer";
-import QRCode from "qrcode";
 
 console.log(`Hello ${process.env.HELLO}`);
 
@@ -58,47 +55,49 @@ app.post("/interactions", async function (req, res) {
 
             const url = await fundWallet(userId, amount, currency);
 
-            QRCode.toFile("./qrcode.png", url, function (err) {
-                if (err) throw err;
-                console.log("QR code image saved.");
-            });
-
-            try {
-                const image = fs.createReadStream("./qrcode.png");
-                const formData = new FormData();
-                formData.append("image", image);
-
-                const response = await axios.post(
-                    "https://d29e-37-174-234-253.ngrok-free.app/solpay",
-                    formData,
-                    {
-                        headers: {
-                            "Content-Type": "multipart/form-data",
-                        },
-                    }
-                );
-
-                console.log("File uploaded successfully:", response.data);
-            } catch (error) {
-                console.error("Error uploading file:", error);
-            }
-
-            console.log(response.data.url);
-
-            return res.send({
+            res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: "Scan the QR code to fund your wallet",
-                    embeds: [
+                    content:
+                        "Click the link and the QR code with your Solana wallet to fund your account",
+                    components: [
                         {
-                            title: "QR Code",
-                            image: {
-                                url: response.data.url,
-                            },
+                            type: MessageComponentTypes.ACTION_ROW,
+                            components: [
+                                {
+                                    type: MessageComponentTypes.BUTTON,
+                                    label: "Fund Wallet",
+                                    style: ButtonStyleTypes.LINK,
+                                    url: url,
+                                },
+                            ],
                         },
                     ],
                 },
             });
+
+            // const recieved = await waitFunds(userId);
+            // if (recieved) {
+            //     axios.post(
+            //         `https://discord.com/api/v8/interactions/${req.body.id}/${req.body.token}/callback`,
+            //         {
+            //             type: 4,
+            //             data: {
+            //                 content: "Funds received!",
+            //             },
+            //         }
+            //     );
+            // } else {
+            //     axios.post(
+            //         `https://discord.com/api/v8/interactions/${req.body.id}/${req.body.token}/callback`,
+            //         {
+            //             type: 4,
+            //             data: {
+            //                 content: "Funds not received.",
+            //             },
+            //         }
+            //     );
+            // }
         } else if (name === "create_bet" && id) {
             const userId = req.body.member.user.id;
 
@@ -107,9 +106,9 @@ app.post("/interactions", async function (req, res) {
             const currency = req.body.data.options[1].value;
             const my_winner = req.body.data.options[2].value;
             const will_destroy = req.body.data.options[3].value;
-            const challenger = req.body.data.options[4].value;
+            const challenger = req.body.data.options[4]?.value;
 
-            const { id } = placeBet(
+            const { success, id } = await placeBet(
                 userId,
                 amount,
                 currency,
@@ -121,6 +120,7 @@ app.post("/interactions", async function (req, res) {
             const message = `<@${userId}> thinks that ${my_winner} will destroy ${will_destroy} in their next game. He's betting ${amount} ${currency}! Will you accept the challenge${
                 challenger ? " <@" + challenger + ">" : ""
             } ?`;
+            const custom_id = `accept_button_${id}`;
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
@@ -132,7 +132,7 @@ app.post("/interactions", async function (req, res) {
                                 {
                                     type: MessageComponentTypes.BUTTON,
                                     // Append the game ID to use later on
-                                    custom_id: `accept_button_${id}`,
+                                    custom_id: custom_id,
                                     label: "Bet against",
                                     style: ButtonStyleTypes.SUCCESS,
                                 },
@@ -141,22 +141,42 @@ app.post("/interactions", async function (req, res) {
                     ],
                 },
             });
+        } else if (name === "withdraw" && id) {
+            const userId = req.body.member.user.id;
+
+            const amount = parseFloat(req.body.data.options[0].value);
+            const currency = req.body.data.options[1].value.toUpperCase();
+            const recipient = req.body.data.options[2].value;
+
+            const { success, msg } = await withdraw(
+                recipient,
+                amount,
+                userId,
+                currency
+            );
+
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: msg,
+                    flags: InteractionResponseFlags.EPHEMERAL,
+                },
+            });
         }
     }
 
     if (type === InteractionType.MESSAGE_COMPONENT) {
         // custom_id set in payload when sending message component
         const componentId = data.custom_id;
-
         if (componentId.startsWith("accept_button_")) {
             // get the associated game ID
             const gameId = componentId.replace("accept_button_", "");
             try {
-                const { result, msg } = await acceptBet(
+                const { success, msg } = await acceptBet(
                     req.body.member.user.id,
                     gameId
                 );
-                if (!result) {
+                if (!success) {
                     return res.send({
                         type:
                             InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,

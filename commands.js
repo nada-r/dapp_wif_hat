@@ -46,6 +46,33 @@ const FUND = {
     type: 1,
 };
 
+const WITHDRAW = {
+    name: "withdraw",
+    description: "Withdraw fund from your account to your Solana wallet",
+    options: [
+        {
+            type: 3,
+            name: "amount",
+            description: "Define amount",
+            required: true,
+        },
+        {
+            type: 3,
+            name: "currency",
+            description: "Define currency",
+            required: true,
+            choices: createCommandChoices(),
+        },
+        {
+            type: 3,
+            name: "address",
+            description: "Reception address",
+            required: true,
+        },
+    ],
+    type: 1,
+};
+
 const CREATE_BET = {
     name: "create_bet",
     description: "create a bet and ping someone",
@@ -106,6 +133,6 @@ const ACCEPT_BET = {
     type: 1,
 };
 
-const ALL_COMMANDS = [TEST_COMMAND, FUND, CREATE_BET, ACCEPT_BET];
+const ALL_COMMANDS = [TEST_COMMAND, FUND, CREATE_BET, ACCEPT_BET, WITHDRAW];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);
