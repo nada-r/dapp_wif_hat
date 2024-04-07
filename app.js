@@ -14,7 +14,11 @@ import {
     DiscordRequest,
 } from "./utils.js";
 import { getShuffledOptions, getResult } from "./game.js";
-import { acceptBet, placeBet } from "./back.js";
+import { acceptBet, placeBet, fundWallet } from "./back.js";
+import axios from "axios";
+import FormData from "form-data";
+import multer from "multer";
+import QRCode from "qrcode";
 
 console.log(`Hello ${process.env.HELLO}`);
 
@@ -52,22 +56,45 @@ app.post("/interactions", async function (req, res) {
             const amount = parseFloat(req.body.data.options[0].value);
             const currency = req.body.data.options[1].value;
 
+            const url = await fundWallet(userId, amount, currency);
+
+            QRCode.toFile("./qrcode.png", url, function (err) {
+                if (err) throw err;
+                console.log("QR code image saved.");
+            });
+
+            try {
+                const image = fs.createReadStream("./qrcode.png");
+                const formData = new FormData();
+                formData.append("image", image);
+
+                const response = await axios.post(
+                    "https://d29e-37-174-234-253.ngrok-free.app/solpay",
+                    formData,
+                    {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
+                    }
+                );
+
+                console.log("File uploaded successfully:", response.data);
+            } catch (error) {
+                console.error("Error uploading file:", error);
+            }
+
+            console.log(response.data.url);
+
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: `Bet created by <@${userId}>`,
-                    components: [
+                    content: "Scan the QR code to fund your wallet",
+                    embeds: [
                         {
-                            type: MessageComponentTypes.ACTION_ROW,
-                            components: [
-                                {
-                                    type: MessageComponentTypes.BUTTON,
-                                    // Append the game ID to use later on
-                                    custom_id: `accept_button_${req.body.id}`,
-                                    label: "Accept",
-                                    style: ButtonStyleTypes.PRIMARY,
-                                },
-                            ],
+                            title: "QR Code",
+                            image: {
+                                url: response.data.url,
+                            },
                         },
                     ],
                 },
@@ -91,8 +118,8 @@ app.post("/interactions", async function (req, res) {
                 challenger
             );
 
-            const message = `<@${userId}> thinks that ${my_winner} will destroy ${will_destroy} in their next game. He's betting ${amount} ${currency}! Will you accept the challenge ${
-                challenger ? challenger : ""
+            const message = `<@${userId}> thinks that ${my_winner} will destroy ${will_destroy} in their next game. He's betting ${amount} ${currency}! Will you accept the challenge${
+                challenger ? " <@" + challenger + ">" : ""
             } ?`;
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -105,22 +132,13 @@ app.post("/interactions", async function (req, res) {
                                 {
                                     type: MessageComponentTypes.BUTTON,
                                     // Append the game ID to use later on
-                                    custom_id: `accept_buttona_${id}`,
+                                    custom_id: `accept_button_${id}`,
                                     label: "Bet against",
                                     style: ButtonStyleTypes.SUCCESS,
                                 },
                             ],
                         },
                     ],
-                },
-            });
-        } else if (name === "accept_bet" && id) {
-            const userId = req.body.member.user.id;
-
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                    content: `Bet accepted by <@${userId}>`,
                 },
             });
         }
@@ -134,37 +152,64 @@ app.post("/interactions", async function (req, res) {
             // get the associated game ID
             const gameId = componentId.replace("accept_button_", "");
             try {
-                const id = acceptBet(req.body.member.user.id, gameId);
-                await res.send({
-                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                const { result, msg } = await acceptBet(
+                    req.body.member.user.id,
+                    gameId
+                );
+                if (!result) {
+                    return res.send({
+                        type:
+                            InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: {
+                            content: msg,
+                            flags: InteractionResponseFlags.EPHEMERAL,
+                        },
+                    });
+                }
+                // disable the button
+                return res.send({
+                    type: InteractionResponseType.UPDATE_MESSAGE,
                     data: {
-                        // Fetches a random emoji to send from a helper function
-                        content: "What is your object of choice?",
-                        // Indicates it'll be an ephemeral message
-                        flags: InteractionResponseFlags.EPHEMERAL,
-                        components: [
-                            {
-                                type: MessageComponentTypes.ACTION_ROW,
-                                components: [
-                                    {
-                                        type:
-                                            MessageComponentTypes.STRING_SELECT,
-                                        // Append game ID
-                                        custom_id: `select_choice_${gameId}`,
-                                        options: getShuffledOptions(),
-                                    },
-                                ],
-                            },
-                        ],
+                        content: `Bet #${gameId} is accepted!`,
+                        // flags: InteractionResponseFlags.EPHEMERAL,
                     },
                 });
-                // Delete previous message
-                await DiscordRequest(endpoint, { method: "DELETE" });
+                // await res.send({
+                //     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                //     data: {
+                //         content: `Bet #${id} is settled!`,
+                //     },
+                // });
+                // // Delete previous message
             } catch (err) {
                 console.error("Error sending message:", err);
             }
         }
     }
+});
+
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "soplay/"); // Set the destination directory
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname); // Keep the original filename
+    },
+});
+
+const upload = multer({ storage: storage });
+
+// Route to handle file uploads
+app.post("/solpay", upload.single("image"), (req, res) => {
+    res.send("File uploaded successfully");
+});
+
+// Route to serve the uploaded file externally
+app.get("/solpay/qrcode.png", (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, "uploads", filename);
+    res.sendFile(filePath);
 });
 
 app.listen(PORT, () => {
