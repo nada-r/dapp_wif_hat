@@ -3,10 +3,13 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use anchor_spl::token_interface::{self, InitializeAccount};
 use std::mem::size_of;
 
+
 declare_id!("2svSNLozh81SxTnHeaXEDoLMU78kCAvzDg83dvdtMzsY");
 
 #[program]
 mod betting {
+    use std::str::FromStr;
+
     use super::*;
 
     pub fn propose_bet(ctx: Context<ProposeBet>, amount: u64) -> Result<()> {
@@ -93,6 +96,8 @@ mod betting {
 
     pub fn resolve_bet(ctx: Context<ResolveBet>, winner: Pubkey) -> Result<()> {
         require!(ctx.accounts.bet.status == BetStatus::Accepted, BettingError::BetNotAccepted);
+        require!(ctx.accounts.admin.is_signer, BettingError::NotSignedByAdmin);
+        require!(*ctx.accounts.admin.key == Pubkey::from_str("some_admin_pubkey").unwrap(), BettingError::NotSignedByAdmin);
         ctx.accounts.bet.winner = winner;
         ctx.accounts.bet.status = BetStatus::Resolved;
         Ok(())
@@ -124,8 +129,6 @@ mod betting {
         ctx.accounts.bet.status = BetStatus::Closed;
         Ok(())
     }
-
-    //pub fn retrieve_bet when bet nullified
 }
 
 
@@ -172,6 +175,8 @@ pub struct AcceptBet<'info> {
 pub struct ResolveBet<'info> {
     #[account(mut, seeds = [b"bets-from-id", id.to_le_bytes().as_ref()], bump)]
     pub bet: Account<'info, Bet>,
+    #[account(signer)]
+    pub admin: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -222,5 +227,6 @@ pub enum BettingError {
     NotTheWinner,
     InsufficientFunds,
     InvalidAmount,
-    Unauthorized
+    Unauthorized,
+    NotSignedByAdmin
 }
