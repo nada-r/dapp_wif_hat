@@ -16,9 +16,9 @@ import {
 import { getShuffledOptions, getResult } from "./game.js";
 import { acceptBet, placeBet, fundWallet } from "./back.js";
 import axios from "axios";
-import { google } from "googleapis";
+import FormData from "form-data";
+import multer from "multer";
 import QRCode from "qrcode";
-import fs from "fs";
 
 console.log(`Hello ${process.env.HELLO}`);
 
@@ -62,69 +62,28 @@ app.post("/interactions", async function (req, res) {
                 if (err) throw err;
                 console.log("QR code image saved.");
             });
-            // Créez un JWT pour l'authentification
-            const jwtClient = new google.auth.JWT(
-                process.env.GOOGLE_CLIENT_EMAIL,
-                null,
-                process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-                ["https://www.googleapis.com/auth/drive"]
-            );
 
-            // Authentifiez-vous avec Google Drive
-            jwtClient.authorize(function (err, tokens) {
-                if (err) {
-                    console.log(err);
-                    return;
-                }
+            try {
+                const image = fs.createReadStream("./qrcode.png");
+                const formData = new FormData();
+                formData.append("image", image);
 
-                const drive = google.drive({ version: "v3", auth: jwtClient });
-
-                // Téléchargez l'image sur Google Drive
-                const fileMetadata = {
-                    name: "solanaPay.png",
-                };
-                const media = {
-                    mimeType: "image/png",
-                    body: fs.createReadStream(
-                        path.join(__dirname, "myImage.png")
-                    ),
-                };
-                drive.files.create(
+                const response = await axios.post(
+                    "https://d29e-37-174-234-253.ngrok-free.app/solpay",
+                    formData,
                     {
-                        resource: fileMetadata,
-                        media: media,
-                        fields: "id",
-                    },
-                    function (err, file) {
-                        if (err) {
-                            console.error(err);
-                            return;
-                        }
-
-                        // Obtenez l'URL de l'image
-                        const imageUrl = `https://drive.google.com/uc?export=view&id=${file.data.id}`;
-
-                        // Envoyez l'image à Discord
-                        axios.post(
-                            "https://discord.com/api/webhooks/your-webhook-id",
-                            {
-                                content: "Voici votre image :",
-                                embeds: [
-                                    {
-                                        image: {
-                                            url: imageUrl,
-                                        },
-                                    },
-                                ],
-                            }
-                        );
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
                     }
                 );
-            });
 
-            const output = await axios.request(input);
+                console.log("File uploaded successfully:", response.data);
+            } catch (error) {
+                console.error("Error uploading file:", error);
+            }
 
-            console.log(output.data.url);
+            console.log(response.data.url);
 
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -134,7 +93,7 @@ app.post("/interactions", async function (req, res) {
                         {
                             title: "QR Code",
                             image: {
-                                url: output.data.url,
+                                url: response.data.url,
                             },
                         },
                     ],
@@ -182,15 +141,6 @@ app.post("/interactions", async function (req, res) {
                     ],
                 },
             });
-        } else if (name === "accept_bet" && id) {
-            const userId = req.body.member.user.id;
-
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                    content: `Bet accepted by <@${userId}>`,
-                },
-            });
         }
     }
 
@@ -206,8 +156,7 @@ app.post("/interactions", async function (req, res) {
                 await res.send({
                     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                     data: {
-                        // Fetches a random emoji to send from a helper function
-                        content: "What is your object of choice?",
+                        content: `Bet #${id} is settled!`,
                         // Indicates it'll be an ephemeral message
                         flags: InteractionResponseFlags.EPHEMERAL,
                         components: [
@@ -233,6 +182,30 @@ app.post("/interactions", async function (req, res) {
             }
         }
     }
+});
+
+// Set up multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "soplay/"); // Set the destination directory
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname); // Keep the original filename
+    },
+});
+
+const upload = multer({ storage: storage });
+
+// Route to handle file uploads
+app.post("/solpay", upload.single("image"), (req, res) => {
+    res.send("File uploaded successfully");
+});
+
+// Route to serve the uploaded file externally
+app.get("/solpay/qrcode.png", (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, "uploads", filename);
+    res.sendFile(filePath);
 });
 
 app.listen(PORT, () => {

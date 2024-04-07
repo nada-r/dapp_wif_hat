@@ -79,51 +79,91 @@ export async function acceptBet(discordId, betId) {
     let wallet = wallets.find((wallet) => wallet.discordId === discordId);
 }
 
-// export async function closeBet(bet) {
-//     const betAddress = bet.address;
-//     const betAccount = await connection.getAccountInfo(new PublicKey(betAddress));
-//     const data = betAccount.data;
-//     const userA = data.slice(0, 8).toString();
-//     const userB = data.slice(8, 16).toString();
-//     const created = data.slice(16, 24).toString();
+export async function closeBet(bet) {
+    // const betAddress = bet.address;
+    const program = await connection.getAccountInfo(
+        new PublicKey("SOLBET_PROGRAM_ID")
+    );
+    const betAccount = ""; //
+    const userA = data.slice(0, 8).toString();
+    const userB = data.slice(8, 16).toString();
+    const created = data.slice(16, 24).toString();
+    const status = bet.status;
 
-//     let match = null;
-//     let winner = null;
-//     let cancel = false;
+    let match = null;
+    let winner = null;
+    let cancel = false;
 
-//     const userA_MatchListFromCreated = await axios.get(`https://api.riotgames.com/lol/match/v5/matches/by-puuid/${userA}/ids?start=0&count=10&api_key=${apiKey}`);
+    const puuiduserA = await axios.get(
+        "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/${userA}?api_key=" +
+            apiKey
+    );
+    const puuiduserB = await axios.get(
+        "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/${userB}?api_key=" +
+            apiKey
+    );
+    const userA_MatchListFromCreated = await axios.get(
+        `https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/${userA}/ids?ids?startTime=${
+            bet.created
+        }&endTime=${
+            bet.created + 24 * 60 * 60 * 1000
+        }&start=0&count=100&api_key=${apiKey}`
+    );
 
-//     // check each match to see if userB is in it
-//     for (let match of userA_MatchListFromCreated.data) {
-//         const matchData = await axios.get(`https://api.riotgames.com/lol/match/v5/matches/${match}?api_key=${apiKey}`);
-//         const participants = matchData.data.info.participants;
-//         for (let participant of participants) {
-//             if (participant.puuid === userB) {
-//                 match = matchData;
-//                 break;
-//             }
-//         }
-//     }
+    // check each match to see if userB is in it
+    for (let m of userA_MatchListFromCreated.data) {
+        const matchData = await axios.get(
+            `https://americas.api.riotgames.com/lol/match/v5/matches/${m}?api_key=${apiKey}`
+        );
+        const participants = matchData.data.info.participants;
+        for (let participant of participants) {
+            if (participant.puuid === userB) {
+                match = matchData;
+                break;
+            }
+        }
+    }
 
-//     //
-//     if (match) {
-//     // check that it has not been accepted after the beginning of the match (refund both), then
+    if (match) {
+        if (bet.status === "confirmed") {
+            // check that it has not been accepted after the beginning of the match (refund both), then
+            let matchStartTime = match.info.gameStartTimestamp;
+            let acceptedTime = bet.accepted;
 
-//         // check winner
-//         if () { // A is winner
+            if (acceptedTime > matchStartTime) {
+                // refund both
+            } else {
+                // check winner
+                let userAIndex = match.info.participants.findIndex(
+                    (participant) => participant.puuid === puuiduserA
+                );
+                let userBIndex = match.info.participants.findIndex(
+                    (participant) => participant.puuid === puuiduserB
+                );
+                let userAWon = match.info.participants[userAIndex].win;
+                let userBWon = match.info.participants[userBIndex].win;
 
-//         }
-//         else if () { // B is winner
-
-//         } else () {
-//             // check if it is expired (more than 24 after accepted) refund both
-
-//             // check is maker is cancelling (not accepted yet) refund maker
-
-//             // check if it is expired (more than 24 after created) refund maker
-//         }
-//     }
-// }
+                if (userAWon && !userBWon) {
+                    // send funds to maker
+                } else if (userBWon && !userAWon) {
+                    // send funds to challenger
+                } else {
+                    // refund both
+                    return "Invalid match result. Refunding both.";
+                }
+            }
+        } else if (
+            bet.status === "confirmed" &&
+            new Date().getTime() - bet.accepted > 24 * 60 * 60 * 1000
+        ) {
+            // refund both
+        } else if (bet.status === "open") {
+            // refund maker & cancel bet
+        } else {
+            return "Bet is still open. You will be able to close it if the match has no result after 24 hours.";
+        }
+    }
+}
 
 export async function withdraw(destinationAddress, amount, discordId) {}
 
@@ -168,6 +208,18 @@ export async function fundWallet(discordId, amount, currency) {
     });
 
     return url;
+}
+
+async function refundBoth(bet) {
+    console.log("Refunding both");
+}
+
+async function refundMaker(bet) {
+    console.log("Refunding maker");
+}
+
+async function claimWin(bet) {
+    console.log("Claiming win");
 }
 // async function main() {
 //     await createWallet("test");
