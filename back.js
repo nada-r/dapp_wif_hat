@@ -21,10 +21,11 @@ import {
     ComputeBudgetProgram,
     TransactionMessage,
 } from "@solana/web3.js";
-const BET_PROGRAM_ID = new PublicKey(
-    "8ftb8B4NeJd2yfguVZo4BqUuBRhuMGpqHhQZ3StK8DH8"
-);
-const program = new Program(idl, BET_PROGRAM_ID, provider);
+
+// const BET_PROGRAM_ID = new PublicKey(
+//     "8ftb8B4NeJd2yfguVZo4BqUuBRhuMGpqHhQZ3StK8DH8"
+// );
+// const program = new Program(idl, BET_PROGRAM_ID, provider);
 
 let data = JSON.parse(fs.readFileSync("./data.json"));
 let wallets = data.wallets;
@@ -404,6 +405,19 @@ export async function withdraw(destinationAddress, amount, discordId, mint) {
     }
 }
 
+export async function send(discordId, mint, amount, recipient) {
+    let wallet = wallets.find((wallet) => wallet.discordId === recipient);
+    if (!wallet) {
+        await createWallet(recipient);
+        wallet = wallets.find((wallet) => wallet.discordId === recipient);
+    }
+    let destAddress = wallet.address;
+    console.log("Sending funds to", destAddress);
+
+    let { success, msg } = await withdraw(destAddress, amount, discordId, mint);
+    return { success, msg };
+}
+
 export async function deposit(amount, discordId, currency) {
     if (currency === "SOL") {
         let wallet = wallets.find((wallet) => wallet.discordId === discordId);
@@ -489,136 +503,136 @@ function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-import { Program, Provider, BN } from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+// import { Program, Provider, BN } from "@project-serum/anchor";
+// import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
-async function proposeBet(
-    amount,
-    proposer,
-    proposerTokenAccount,
-    mint,
-    provider,
-    id
-) {
-    const betId = BN.from(id);
-    const transaction = new web3.Transaction();
+// async function proposeBet(
+//     amount,
+//     proposer,
+//     proposerTokenAccount,
+//     mint,
+//     provider,
+//     id
+// ) {
+//     const betId = BN.from(id);
+//     const transaction = new web3.Transaction();
 
-    const rent = await provider.connection.getMinimumBalanceForRentExemption(
-        165
-    );
+//     const rent = await provider.connection.getMinimumBalanceForRentExemption(
+//         165
+//     );
 
-    const proposeBetInstruction = program.proposeBet(new BN(amount), {
-        accounts: {
-            bet: null,
-            systemProgram: SystemProgram.programId,
-            proposer: proposer.publicKey,
-            proposerTokenAccount: proposerTokenAccount.publicKey,
-            betTokenAccount: null,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            splMintAccount: mint.publicKey,
-            rent: rent,
-        },
-        signers: [proposer],
-        instructions: [(id = betId)],
-    });
+//     const proposeBetInstruction = program.proposeBet(new BN(amount), {
+//         accounts: {
+//             bet: null,
+//             systemProgram: SystemProgram.programId,
+//             proposer: proposer.publicKey,
+//             proposerTokenAccount: proposerTokenAccount.publicKey,
+//             betTokenAccount: null,
+//             tokenProgram: TOKEN_PROGRAM_ID,
+//             splMintAccount: mint.publicKey,
+//             rent: rent,
+//         },
+//         signers: [proposer],
+//         instructions: [(id = betId)],
+//     });
 
-    transaction.add(proposeBetInstruction);
+//     transaction.add(proposeBetInstruction);
 
-    let signature = await web3.sendAndConfirmTransaction(
-        provider.connection,
-        transaction,
-        [proposer]
-    );
-    console.log("Transaction signature", signature);
+//     let signature = await web3.sendAndConfirmTransaction(
+//         provider.connection,
+//         transaction,
+//         [proposer]
+//     );
+//     console.log("Transaction signature", signature);
 
-    return signature;
-}
+//     return signature;
+// }
 
-async function acceptBet(
-    betId,
-    amount,
-    accepter,
-    accepterTokenAccount,
-    provider
-) {
-    const transaction = new web3.Transaction();
+// async function sendAcceptBet(
+//     betId,
+//     amount,
+//     accepter,
+//     accepterTokenAccount,
+//     provider
+// ) {
+//     const transaction = new web3.Transaction();
 
-    const acceptBetInstruction = program.acceptBet(new BN(amount), {
-        accounts: {
-            bet: null,
-            accepter: accepter.publicKey,
-            accepterTokenAccount: accepterTokenAccount.publicKey,
-            betTokenAccount: await PublicKey.findProgramAddressSync(
-                ["bets-token-id", betId.toBuffer()],
-                BET_PROGRAM_ID
-            ),
-            tokenProgram: TOKEN_PROGRAM_ID,
-        },
-        signers: [accepter],
-        instructions: [(id = betId)],
-    });
+//     const acceptBetInstruction = program.acceptBet(new BN(amount), {
+//         accounts: {
+//             bet: null,
+//             accepter: accepter.publicKey,
+//             accepterTokenAccount: accepterTokenAccount.publicKey,
+//             betTokenAccount: await PublicKey.findProgramAddressSync(
+//                 ["bets-token-id", betId.toBuffer()],
+//                 BET_PROGRAM_ID
+//             ),
+//             tokenProgram: TOKEN_PROGRAM_ID,
+//         },
+//         signers: [accepter],
+//         instructions: [(id = betId)],
+//     });
 
-    transaction.add(acceptBetInstruction);
+//     transaction.add(acceptBetInstruction);
 
-    let signature = await web3.sendAndConfirmTransaction(
-        provider.connection,
-        transaction,
-        [accepter]
-    );
-    console.log("Transaction signature", signature);
+//     let signature = await web3.sendAndConfirmTransaction(
+//         provider.connection,
+//         transaction,
+//         [accepter]
+//     );
+//     console.log("Transaction signature", signature);
 
-    return signature;
-}
+//     return signature;
+// }
 
-async function resolveBet(betId, winner, admin, provider) {
-    const transaction = new web3.Transaction();
+// async function resolveBet(betId, winner, admin, provider) {
+//     const transaction = new web3.Transaction();
 
-    const resolveBetInstruction = program.resolveBet(winner.publicKey, {
-        accounts: {
-            bet: null,
-        },
-        signers: [admin],
-        instructions: [(id = betId)],
-    });
+//     const resolveBetInstruction = program.resolveBet(winner.publicKey, {
+//         accounts: {
+//             bet: null,
+//         },
+//         signers: [admin],
+//         instructions: [(id = betId)],
+//     });
 
-    transaction.add(resolveBetInstruction);
+//     transaction.add(resolveBetInstruction);
 
-    let signature = await web3.sendAndConfirmTransaction(
-        provider.connection,
-        transaction,
-        [winner]
-    );
-    console.log("Transaction signature", signature);
+//     let signature = await web3.sendAndConfirmTransaction(
+//         provider.connection,
+//         transaction,
+//         [winner]
+//     );
+//     console.log("Transaction signature", signature);
 
-    return signature;
-}
+//     return signature;
+// }
 
-async function claim_winnings(betId, claimant, claimantTokenAccount) {
-    const transaction = new web3.Transaction();
+// async function claim_winnings(betId, claimant, claimantTokenAccount) {
+//     const transaction = new web3.Transaction();
 
-    const claimWinningsInstruction = program.claimWinnings({
-        accounts: {
-            bet: null,
-            claimant: claimant.publicKey,
-            claimantTokenAccount: claimantTokenAccount.publicKey,
-            betTokenAccount: await PublicKey.findProgramAddressSync(
-                ["bets-token-id", betId.toBuffer()],
-                BET_PROGRAM_ID
-            ),
-            tokenProgram: TOKEN_PROGRAM_ID,
-        },
-        signers: [claimer],
-        instructions: [(id = betId)],
-    });
+//     const claimWinningsInstruction = program.claimWinnings({
+//         accounts: {
+//             bet: null,
+//             claimant: claimant.publicKey,
+//             claimantTokenAccount: claimantTokenAccount.publicKey,
+//             betTokenAccount: await PublicKey.findProgramAddressSync(
+//                 ["bets-token-id", betId.toBuffer()],
+//                 BET_PROGRAM_ID
+//             ),
+//             tokenProgram: TOKEN_PROGRAM_ID,
+//         },
+//         signers: [claimer],
+//         instructions: [(id = betId)],
+//     });
 
-    transaction.add(claimWinningsInstruction);
+//     transaction.add(claimWinningsInstruction);
 
-    let signature = await web3.sendAndConfirmTransaction(
-        provider.connection,
-        transaction,
-        [claimer]
-    );
-    console.log("Transaction signature", signature);
+//     let signature = await web3.sendAndConfirmTransaction(
+//         provider.connection,
+//         transaction,
+//         [claimer]
+//     );
+//     console.log("Transaction signature", signature);
 
-    return signature;
-}
+//     return signature;
+// }

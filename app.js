@@ -14,7 +14,7 @@ import {
     DiscordRequest,
 } from "./utils.js";
 import { getShuffledOptions, getResult } from "./game.js";
-import { acceptBet, placeBet, fundWallet, withdraw } from "./back.js";
+import { acceptBet, placeBet, fundWallet, withdraw, send } from "./back.js";
 import multer from "multer";
 
 console.log(`Hello ${process.env.HELLO}`);
@@ -153,6 +153,27 @@ app.post("/interactions", async function (req, res) {
                 amount,
                 userId,
                 currency
+            );
+
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: msg,
+                    flags: InteractionResponseFlags.EPHEMERAL,
+                },
+            });
+        } else if (name === "send" && id) {
+            const userId = req.body.member.user.id;
+
+            const amount = parseFloat(req.body.data.options[0].value);
+            const currency = req.body.data.options[1].value.toUpperCase();
+            const recipient = req.body.data.options[2].value;
+
+            const { success, msg } = await send(
+                userId,
+                currency,
+                amount,
+                recipient
             );
 
             return res.send({

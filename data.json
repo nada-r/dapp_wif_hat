@@ -11,6 +11,12 @@
       "address": "96Ki1kc7mrKtTv8BEhvurEPsiJbMdRNe3NL2tJgEYbPK",
       "privateKey": "5ZQH979nNca4MvLPvgegoH5zDthvXvZ4dBdPQP3YGshCL5uMC9HEBce1ekyuo7QaQXgYDdjCvvZGGeqR1c275SMs",
       "bets": []
+    },
+    {
+      "discordId": "SOL",
+      "address": "AoSstZMktNRxk4By5AJAok5tvfCJrufQKpEYksx5QLpD",
+      "privateKey": "j7gy7hiats7P2ep1Z4dyEJ8txDPgcZV5BYNKeMNnGMzkhhvJJ5D5y9dehAyaiTyKxQB3WtTH3VzGH1wnmNNs1DX",
+      "bets": []
     }
   ],
   "bets": [

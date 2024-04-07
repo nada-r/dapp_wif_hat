@@ -73,6 +73,33 @@ const WITHDRAW = {
     type: 1,
 };
 
+const SEND = {
+    name: "send",
+    description: "Send to discord friend",
+    options: [
+        {
+            type: 3,
+            name: "amount",
+            description: "Define amount",
+            required: true,
+        },
+        {
+            type: 3,
+            name: "currency",
+            description: "Define currency",
+            required: true,
+            choices: createCommandChoices(),
+        },
+        {
+            type: 6,
+            name: "user",
+            description: "User to send to",
+            required: true,
+        },
+    ],
+    type: 1,
+};
+
 const CREATE_BET = {
     name: "create_bet",
     description: "create a bet and ping someone",
@@ -133,6 +160,13 @@ const ACCEPT_BET = {
     type: 1,
 };
 
-const ALL_COMMANDS = [TEST_COMMAND, FUND, CREATE_BET, ACCEPT_BET, WITHDRAW];
+const ALL_COMMANDS = [
+    TEST_COMMAND,
+    FUND,
+    CREATE_BET,
+    ACCEPT_BET,
+    WITHDRAW,
+    SEND,
+];
 
 InstallGlobalCommands(process.env.APP_ID, ALL_COMMANDS);
