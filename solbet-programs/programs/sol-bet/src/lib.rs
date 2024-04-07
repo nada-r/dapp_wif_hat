@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{self, InitializeAccount};
 use std::mem::size_of;
 
 
-declare_id!("2svSNLozh81SxTnHeaXEDoLMU78kCAvzDg83dvdtMzsY");
+declare_id!("7FXV44gNT2FmyaNGadhA7SnKUXJEbMAAfH24o3QApTE8");
 
 #[program]
 mod betting {
@@ -18,9 +18,9 @@ mod betting {
 
         let cpi_accounts = InitializeAccount {
             account: ctx.accounts.bet_token_account.to_account_info(),
-            mint: ctx.accounts.spl_mint_account.to_account_info(), // USDC mint account
-            authority: ctx.accounts.bet.to_account_info(), // Your program's account
-            rent: ctx.accounts.rent.to_account_info(), // System rent account
+            mint: ctx.accounts.spl_mint_account.to_account_info(), 
+            authority: ctx.accounts.bet.to_account_info(), 
+            rent: ctx.accounts.rent.to_account_info(), 
         };
     
         let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -42,9 +42,6 @@ mod betting {
         ctx.accounts.bet.proposer = ctx.accounts.proposer.key();
         ctx.accounts.bet.acceptor = Pubkey::default();
         ctx.accounts.bet.winner = Pubkey::default();
-        ctx.accounts.bet.proposer_token_account = ctx.accounts.proposer_token_account.key();
-        ctx.accounts.bet.acceptor_token_account = Pubkey::default();
-        ctx.accounts.bet.bet_token_account = ctx.accounts.bet_token_account.key();
         ctx.accounts.bet.status = BetStatus::Open;
 
         Ok(())
@@ -60,7 +57,7 @@ mod betting {
 
         let cpi_accounts = Transfer {
             from: ctx.accounts.bet_token_account.to_account_info(),
-            to: ctx.accounts.proposer.to_account_info(),
+            to: ctx.accounts.proposer_token_account.to_account_info(),
             authority: ctx.accounts.bet.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -88,7 +85,6 @@ mod betting {
         token::transfer(cpi_ctx, amount)?;
 
         ctx.accounts.bet.acceptor = ctx.accounts.acceptor.key();
-        ctx.accounts.bet.acceptor_token_account = ctx.accounts.acceptor_token_account.key();
         ctx.accounts.bet.status = BetStatus::Accepted;
 
         Ok(())
@@ -97,7 +93,7 @@ mod betting {
     pub fn resolve_bet(ctx: Context<ResolveBet>, winner: Pubkey) -> Result<()> {
         require!(ctx.accounts.bet.status == BetStatus::Accepted, BettingError::BetNotAccepted);
         require!(ctx.accounts.admin.is_signer, BettingError::NotSignedByAdmin);
-        require!(*ctx.accounts.admin.key == Pubkey::from_str("some_admin_pubkey").unwrap(), BettingError::NotSignedByAdmin);
+        require!(*ctx.accounts.admin.key == Pubkey::from_str("2ax3geQJHsm8hkJAJbcJ29b2uWckB1XX6R6CmmBi8rrP").unwrap(), BettingError::NotSignedByAdmin);
         ctx.accounts.bet.winner = winner;
         ctx.accounts.bet.status = BetStatus::Resolved;
         Ok(())
@@ -124,7 +120,7 @@ mod betting {
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
 
-        token::transfer(cpi_ctx, ctx.accounts.bet.amount)?;
+        token::transfer(cpi_ctx, ctx.accounts.bet.amount*2)?;
 
         ctx.accounts.bet.status = BetStatus::Closed;
         Ok(())
@@ -141,7 +137,7 @@ pub struct ProposeBet<'info> {
     #[account(mut)]
     pub proposer: Signer<'info>,
     pub proposer_token_account: Account<'info, TokenAccount>,
-    #[account(init, payer = proposer, space = 8 + 165)]
+    #[account(init, payer = proposer, space = size_of::<TokenAccount>(), seeds = [b"bets-token-id", id.to_le_bytes().as_ref()], bump)]
     pub bet_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub spl_mint_account: Account<'info, Mint>,
@@ -155,6 +151,7 @@ pub struct CancelBet<'info> {
     pub bet: Account<'info, Bet>,
     pub proposer: Signer<'info>,
     pub proposer_token_account: Account<'info, TokenAccount>,
+    #[account(mut, seeds = [b"bets-token-id", id.to_le_bytes().as_ref()], bump)]
     pub bet_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
@@ -166,6 +163,7 @@ pub struct AcceptBet<'info> {
     pub bet: Account<'info, Bet>,
     pub acceptor: Signer<'info>,
     pub acceptor_token_account: Account<'info, TokenAccount>,
+    #[account(mut, seeds = [b"bets-token-id", id.to_le_bytes().as_ref()], bump)]
     pub bet_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
@@ -186,8 +184,8 @@ pub struct ClaimWinnings<'info> {
     pub bet: Account<'info, Bet>,
     pub claimant: Signer<'info>,
     pub claimant_token_account: Account<'info, TokenAccount>,
+    #[account(mut, seeds = [b"bets-token-id", id.to_le_bytes().as_ref()], bump)]
     pub bet_token_account: Account<'info, TokenAccount>,
-    pub admin: Signer<'info>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -200,11 +198,6 @@ pub struct Bet {
     pub winner: Pubkey,
 
     pub status: BetStatus,
-
-    pub proposer_token_account: Pubkey,
-    pub acceptor_token_account: Pubkey,
-    pub bet_token_account: Pubkey,
-    pub token_mint: Pubkey,
 
     pub bump: u8,
 }
