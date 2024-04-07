@@ -43,6 +43,7 @@ mod betting {
         ctx.accounts.bet.acceptor = Pubkey::default();
         ctx.accounts.bet.winner = Pubkey::default();
         ctx.accounts.bet.status = BetStatus::Open;
+        ctx.accounts.bet.bump = ctx.bumps.bet;
 
         Ok(())
     }
