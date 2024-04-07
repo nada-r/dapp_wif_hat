@@ -152,12 +152,25 @@ app.post("/interactions", async function (req, res) {
             // get the associated game ID
             const gameId = componentId.replace("accept_button_", "");
             try {
-                const id = acceptBet(req.body.member.user.id, gameId);
+                const { result, msg } = await acceptBet(
+                    req.body.member.user.id,
+                    gameId
+                );
+                if (!result) {
+                    return res.send({
+                        type:
+                            InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: {
+                            content: msg,
+                            flags: InteractionResponseFlags.EPHEMERAL,
+                        },
+                    });
+                }
                 // disable the button
                 return res.send({
                     type: InteractionResponseType.UPDATE_MESSAGE,
                     data: {
-                        content: `Bet #${id} is accepted!`,
+                        content: `Bet #${gameId} is accepted!`,
                         // flags: InteractionResponseFlags.EPHEMERAL,
                     },
                 });

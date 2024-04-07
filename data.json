@@ -24,6 +24,17 @@
       "acceptanceValidUntil": "",
       "cancelAfter": "",
       "status": "pending"
+    },
+    {
+      "choiceA": "Wunderful",
+      "choiceB": "Pink Ward",
+      "amount": 0.3,
+      "currency": "sol",
+      "status": "open",
+      "address": "4FRkygzTAVKPH2XatKFq4F7S5gc629sk3ByvJGG4Jy4V",
+      "maker": "703196555515133952",
+      "challenger": "775388852201193512",
+      "created": 1712452892055
     }
   ]
 }

@@ -62,9 +62,12 @@ export async function placeBet(
         status: "open",
         address: address,
         maker: discordId,
-        challenger: challenger,
         created: timestamp,
     };
+
+    if (challenger) {
+        bet.challenger = challenger;
+    }
 
     bets.push(bet);
     fs.writeFileSync("./data.json", JSON.stringify(data, null, 2));
@@ -73,10 +76,20 @@ export async function placeBet(
 }
 
 export async function acceptBet(discordId, betId) {
-    console.log("accepting bet", bet);
-
     let bet = bets.find((bet) => bet.id === betId);
+    if (bet.hasOwnProperty === "challenger") {
+        if (bet.challenger !== discordId) {
+            return { success: false, msg: "This bet is not for you." };
+        }
+    }
+
     let wallet = wallets.find((wallet) => wallet.discordId === discordId);
+
+    bet.status = "confirmed";
+    bet.accepted = new Date().getTime();
+    bet.challenger = discordId;
+
+    fs.writeFileSync("./data.json", JSON.stringify(data, null, 2));
 }
 
 export async function closeBet(bet) {
