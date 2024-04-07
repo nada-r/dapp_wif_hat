@@ -153,30 +153,21 @@ app.post("/interactions", async function (req, res) {
             const gameId = componentId.replace("accept_button_", "");
             try {
                 const id = acceptBet(req.body.member.user.id, gameId);
-                await res.send({
-                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                // disable the button
+                return res.send({
+                    type: InteractionResponseType.UPDATE_MESSAGE,
                     data: {
-                        content: `Bet #${id} is settled!`,
-                        // Indicates it'll be an ephemeral message
-                        flags: InteractionResponseFlags.EPHEMERAL,
-                        components: [
-                            {
-                                type: MessageComponentTypes.ACTION_ROW,
-                                components: [
-                                    {
-                                        type:
-                                            MessageComponentTypes.STRING_SELECT,
-                                        // Append game ID
-                                        custom_id: `select_choice_${gameId}`,
-                                        options: getShuffledOptions(),
-                                    },
-                                ],
-                            },
-                        ],
+                        content: `Bet #${id} is accepted!`,
+                        // flags: InteractionResponseFlags.EPHEMERAL,
                     },
                 });
-                // Delete previous message
-                await DiscordRequest(endpoint, { method: "DELETE" });
+                // await res.send({
+                //     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                //     data: {
+                //         content: `Bet #${id} is settled!`,
+                //     },
+                // });
+                // // Delete previous message
             } catch (err) {
                 console.error("Error sending message:", err);
             }
